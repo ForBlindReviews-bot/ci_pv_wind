@@ -10,7 +10,7 @@ warnings.filterwarnings('ignore')
 
 
 
-# In[extreme low output]
+
 
 def renumber_continuous(nums):
     # Generate event number
