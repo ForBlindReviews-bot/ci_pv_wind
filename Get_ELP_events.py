@@ -91,14 +91,14 @@ def main(climate_model, scenario, year, threshold, threshold1, threshold2, aves,
     
  
     #    
-    # if remove_seasonal_no_power:
+    if remove_seasonal_no_power:
     # Data with 10 quantile < 0 is deleted        
-    #     df = df[df['thrs_10th']>0]
-    #     df.reset_index(drop = True, inplace = True)     
+         df = df[df['thrs_10th']>0]
+         df.reset_index(drop = True, inplace = True)     
 
     df['power'][df['power']<0] = 0 
      
-    #为事件添加编号
+    # get Event_id
     df = df.sort_values(by=['lon_index', 'lat_index']).reset_index(drop=True)
     df['event_ID'] = renumber_continuous(df['doy'])       
 
@@ -134,13 +134,10 @@ def main(climate_model, scenario, year, threshold, threshold1, threshold2, aves,
         
 
             
-
+# ------------------------------------------------------------------------------ 
 #
 # main 
 #
-
-
-
 scenarios = ['historical','ssp126', 'ssp245', 'ssp370']
 start_years = [1985, 2015, 2015, 2015]
 end_years = [1985, 2100, 2100, 2100]
@@ -189,10 +186,8 @@ for c in range(0, len(climate_models)):
             
 
 
-
+# ------------------------------------------------------------------------------ 
 # In[annual low_output map]
-
-
 def main(climate_model, scenario, year, ave):
     
     save_path = os.path.join(r'I:\global_wind_future\low_output_by_percentile\annual_low_output', climate_model) 
@@ -232,11 +227,9 @@ def main(climate_model, scenario, year, ave):
                                 , encoding={'annual_low_output': {'zlib': True, 'complevel': 6}})         
 
 
-
 #
 # main 
 #
-
 scenarios = ['historical','ssp126', 'ssp245', 'ssp370']
 start_years = [1985, 2015, 2015, 2015]
 end_years = [1985, 2100, 2100, 2100]
@@ -250,8 +243,7 @@ climate_models = ['ACCESS-ESM1-5','BCC-CSM2-MR',
                   'MRI-ESM2-0', 'NorESM2-MM', 'UKESM1-0-LL'] 
 
 
-for c in range(0, len(climate_models)):
-    
+for c in range(0, len(climate_models)):    
     climate_model = climate_models[c]
     ave_name =  r'I:\global_wind_future\low_output_by_percentile\threshold\ave_' + climate_model + '.nc'
     ave = xr.open_dataset(ave_name)
@@ -271,9 +263,8 @@ for c in range(0, len(climate_models)):
             
 
 
-        
+# ------------------------------------------------------------------------------        
 # In[share of extreme events: related to historical total low output @selected ]
-
 from scipy.sparse import coo_matrix
 def reconstruct_2d_array(index_value_pairs, num_rows, num_cols):
     rows, cols, values = zip(*index_value_pairs)
@@ -328,7 +319,6 @@ def main(climate_model, scenario, start_year, end_year, low_output):
 #
 # main 
 #
-
 scenarios = ['historical','ssp126','ssp126','ssp245','ssp245','ssp370','ssp370']
 start_years = [1985, 2031, 2071, 2031, 2071, 2031, 2071]
 end_years = [2014, 2060, 2100, 2060, 2100, 2060, 2100]
@@ -374,10 +364,8 @@ for c in range(0, len(climate_models)):
                 
         
         
-        
+# ------------------------------------------------------------------------------         
 # In[extreme low-outputs]        
-
-
 from scipy.sparse import coo_matrix
 def reconstruct_2d_array(index_value_pairs, num_rows, num_cols):
     rows, cols, values = zip(*index_value_pairs)
@@ -404,7 +392,6 @@ def main(climate_model, scenario, start_year, end_year, low_output):
 #
 # main 
 #
-
 scenarios = ['historical','ssp126','ssp126','ssp245','ssp245','ssp370','ssp370']
 start_years = [1985, 2031, 2071, 2031, 2071, 2031, 2071]
 end_years = [2014, 2060, 2100, 2060, 2100, 2060, 2100]
@@ -418,7 +405,7 @@ climate_models = ['ACCESS-ESM1-5','BCC-CSM2-MR',
                   'MRI-ESM2-0', 'NorESM2-MM'] 
 
 
-for c in range(9,len(climate_models)):
+for c in range(0,len(climate_models)):
     
     climate_model = climate_models[c]
     
