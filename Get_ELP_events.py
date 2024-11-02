@@ -40,7 +40,7 @@ def process_chunk(chunk):
 
 
 
-def main(climate_model, scenario, year, threshold, threshold1, threshold2, aves, remove_seasonal_no_power = True):
+def main(climate_model, scenario, year, threshold, threshold1, threshold2, aves, remove_seasonal_no_power = False):
     # Generate the event information table
     #
     # define save path and name
