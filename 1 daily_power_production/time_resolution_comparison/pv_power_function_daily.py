@@ -175,9 +175,51 @@ class PVsystem:
                                        + np.pi * (w2 - w1) / 180 * np.sin( lat / 180 * np.pi) * np.sin(da) )    
             
         return np.array(I0)
+
     
+    def Hourly_Ex_ratio(self):
+        her = self.HourlyExtraterrestrialRadiation().copy()
+        her[her<0] = 0
+ 
+        her = pd.DataFrame(her)
+        her.index = self.time#.tz_convert('UTC')  
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore')
+            factor = np.array(her[0]) / np.array(np.repeat(her.groupby(her.index.date).sum()[0],24)) 
+            factor[np.isnan(factor)] = 1
+        return factor
+
     
+    def liu_jordan_ratio(self):
+        omega = np.radians(self.HourAngle())
         
+        dayofyear = self.time.dayofyear
+        
+        # declination angle
+        da = pvlib.solarposition.declination_spencer71(dayofyear) 
+        
+        # sunset hour angle
+        x = np.array(-np.tan(self.lat/180 * np.pi) * np.tan(da))
+        x[x>1] = 1
+        x[x<-1] = -1
+        omega_s = np.arccos(x) 
+        
+        numerator = np.pi / 24 * (np.cos(omega) - np.cos(omega_s))
+        denominator = np.sin(omega_s) - omega_s * np.cos(omega_s)        
+
+        lj_ratio = np.zeros_like(omega, dtype=np.float32)       
+        valid = ~np.isclose(denominator, 0)  
+        lj_ratio[valid] = numerator[valid] / denominator[valid]
+        lj_ratio[lj_ratio<=0]=0
+        
+        her = pd.DataFrame(lj_ratio)
+        her.index = self.time
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore')
+            factor = np.array(her[0]) / np.array(np.repeat(her.groupby(her.index.date).sum()[0],24))   
+            factor[np.isnan(factor)] = 1 
+        return factor        
+
     
     
     def Pramod_ratio(self):
@@ -214,10 +256,18 @@ class PVsystem:
  
         rs = self.rs
         hourly_d_rs = np.repeat(rs, 24)
-
-        factor = self.Pramod_ratio()
-        rs_hourly = factor * hourly_d_rs
+        
+        if self.decom_method == 'Hourly_Ex':
+            factor = self.Hourly_Ex_ratio()
             
+        if self.decom_method == 'liu_jordan':
+            factor = self.liu_jordan_ratio()
+            
+        if self.decom_method == 'Pramod':
+            factor = self.Pramod_ratio()
+            
+        rs_hourly = factor * hourly_d_rs    
+    
         # para
         I0 = np.where(self.der == 0, 1, self.der)
       
@@ -374,5 +424,6 @@ def main(inputs):
     else:
         power=np.array([0]*len(rsds), dtype=np.float32)
         return power
+
 
 
