@@ -225,16 +225,16 @@ def main(power, climate_model, scenario, year, thresholds, clim_aves):
 
         #
         maps = np.concatenate(( elp.reshape(1, lat_length, lon_length), 
+                                elp_max.reshape(1, lat_length, lon_length), 
                                 total_days.reshape(1, lat_length, lon_length), 
                                 duration.reshape(1, lat_length, lon_length), 
                                 duration_max.reshape(1, lat_length, lon_length), 
                                 frequency.reshape(1, lat_length, lon_length), 
                                 intensity_ab.reshape(1, lat_length, lon_length),
                                 intensity_re.reshape(1, lat_length, lon_length),
-                                elp_max.reshape(1, lat_length, lon_length)),
                               axis=0, dtype=np.float32) 
 
-        var_names = ['ELP', 'total_days', 'duration_ave', 'duration_max', 'frequency', 'intensity_ab_ave', 'intensity_re_ave', 'ELP_max']
+        var_names = ['ELP', 'ELP_max',  'total_days', 'duration_ave', 'duration_max', 'frequency', 'intensity_ab_ave', 'intensity_re_ave']
         maps = xr.Dataset(
                             {var_names[i]: (["lat", "lon"], maps[i,:,:]) for i in range(len(var_names))}, 
                             coords={
@@ -351,3 +351,4 @@ def main(power, climate_model, scenario, year, thresholds, clim_aves):
 
 
         
+
