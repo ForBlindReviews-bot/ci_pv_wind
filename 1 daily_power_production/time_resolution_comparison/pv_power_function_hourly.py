@@ -293,11 +293,12 @@ def main(inputs):
                    lon,
                    lat)
 
-        power=f.CECmod()
+        power=f.CECmod() * f.Area_ajust() 
         return np.array(power['p_mp'], dtype=np.float32)
     
     else:
         power=np.array([0]*len(rsds),dtype=np.float32)
         return power
+
 
 
