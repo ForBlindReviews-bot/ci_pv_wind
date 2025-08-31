@@ -203,9 +203,7 @@ class PVsystem:
     
 
     def kd(self):
-        # function: using BRL model to caculate the fraction of diffuse solar radiation from global solar radiation
-        # para Source: Liu et.al.2022 Spatial estimation of the optimum PV tilt angles in China by
-        #              incorporating ground with satellite data. Renewable Energy        
+        # function: using BRL model to caculate the fraction of diffuse solar radiation from global solar radiation     
         # Lauret et al.2013 Bayesian statistical analysis applied to solar radiation modelling. 
         beta0 = -5.32
         beta1 = 7.2
@@ -376,4 +374,5 @@ def main(inputs):
     else:
         power=np.array([0]*len(rsds), dtype=np.float32)
         return power
+
 
