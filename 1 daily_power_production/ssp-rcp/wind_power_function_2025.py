@@ -81,9 +81,9 @@ class windpower:
     
     def get_temp_at_hub_height(self):
         r"""
-        Calculates the temperature at hub height using a linear gradient.
+        Calculates the temperature at hub height using a linear gradient. (windpowerlib
     
-        A linear temperature gradient of -6.5 K/km is assumed. This function is
+        A linear temperature gradient of -6.5 K/km (-0.0065 K/m) is assumed. This function is
         carried out when the parameter `temperature_model` of an instance of
         the :class:`~.modelchain.ModelChain` class is
         'temperature_gradient'.
@@ -101,19 +101,8 @@ class windpower:
         -------
         :pandas:`pandas.Series<series>` or numpy.array
             Temperature at hub height in K.
-    
-        Notes
-        -----
-    
-        Assumptions:
-    
-        * Temperature gradient of -6.5 K/km (-0.0065 K/m)
-    
-        References
-        ----------
-        .. [1] ICAO-Standardatmosphäre (ISA).
-            http://www.dwd.de/DE/service/lexikon/begriffe/S/Standardatmosphaere_pdf.pdf?__blob=publicationFile&v=3
-    
+        Ref:
+            windpowerlib      
         """
         return self.tas - 0.0065 * self.hub_height
     
@@ -162,13 +151,11 @@ class windpower:
         return self.wind_speed * (self.hub_height / self.wind_speed_height) ** self.pl_exponent
     
     
-
-    
-    
+   
     
     def get_weibull_pdf(self):
         ws_hub = self.wind_speed_hub_height()
-
+        
         lambda_param = ws_hub / sp.gamma(1 + 1/self.k)   
 
         # Generate the instantaneous wind speed probability density function of the Weibull distribution 
@@ -190,25 +177,20 @@ class windpower:
         unit: W
         """        
         # Calculate the probability density of wind speed
-        pdf_values, U = self.get_weibull_pdf() 
-        
+        pdf_values, U = self.get_weibull_pdf()         
         
         curve_ws, curve_power = self.power_curve['wind_speed'], self.power_curve['value']
         
         U_c = U * (self.get_air_density() / 1.225)**(1/3)
         power_values = np.interp(U_c, curve_ws, curve_power)
-          
- 
+
         # np.trapz：Use the Trapezoidal Rule for numerical integration.
         # It integrates the power-probability density product within the U range to obtain the weighted expected power.
-        expected_power = np.trapz(power_values * pdf_values, U_c, axis=0)
- 
+        expected_power = np.trapz(power_values * pdf_values, U, axis=0) 
         return expected_power
         
         
-
-    
-        
+       
  
         
 # In[]
@@ -216,12 +198,13 @@ def main(input_para):
     # pixel_type = 0: none
     # pixel_type = 1: onshore
     # pixel_type = 2: offshore
-    pixel_type, tas, dem, wind_speed, pl_exponent = input_para[:] #input_para[10000]    
+    pixel_type, tas, dem, wind_speed, pl_exponent = input_para[:]
     if pixel_type != 0:
         f = windpower(pixel_type, tas, dem, wind_speed, pl_exponent)
-        energy = f.get_daily_mean_wind_power() #unit: w
+        energy = f.get_daily_mean_wind_power() 
         return np.array(energy, dtype=np.float32)
     else:
         return np.array([0]*len(wind_speed),dtype=np.float32)
+
 
 
