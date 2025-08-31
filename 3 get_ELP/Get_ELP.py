@@ -125,7 +125,7 @@ def main(power, climate_model, scenario, year, thresholds, clim_aves):
         df['power_production'][df['power_production']<0] = 0 
 
 
-        #为事件添加编号
+        # Event-ID
         df = df.sort_values(by=['lon_index', 'lat_index']).reset_index(drop=True)
         df['event_ID'] = renumber_continuous(df['doy'])       
         
@@ -347,6 +347,7 @@ def main(power, climate_model, scenario, year, thresholds, clim_aves):
             
 
             
+
 
 
         
