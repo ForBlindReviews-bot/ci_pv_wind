@@ -189,7 +189,7 @@ class PVsystem:
         
         her = self.her.copy() * np.array(r)
         her[her<0] = 0
-        # UTC to match the daily rsds data 
+
         her = pd.DataFrame(her)
         her.index = self.time
         with warnings.catch_warnings():
@@ -375,6 +375,7 @@ def main(inputs):
         return power
 
     
+
 
 
 
