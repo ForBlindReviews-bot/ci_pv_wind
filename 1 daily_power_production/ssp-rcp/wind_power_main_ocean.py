@@ -100,7 +100,7 @@ for s in [0,1,2,3]:
         time = wind_speed.time.values
      
         
-        # 获取DEM数据
+        # DEM
         dem_map = xr.open_dataset(r'./sensitivity/data/dem.tif')['band_data'][0]
         dem_map.coords['x'] = (dem_map.coords['x'] + 180) % 360 - 180
         dem_map = dem_map.sortby(dem_map.x) 
@@ -172,3 +172,4 @@ for s in [0,1,2,3]:
         print('finished output', climate_models, scenario[s], year)
   
            
+
