@@ -106,10 +106,6 @@ lons, lats = np.meshgrid(lon,lat)
 #time = wind_speed.time.values
 
 
-# house information            
-sf_roof = np.array([1 for i in range(size)])
-house_area = np.array([1 for i in range(size)])
-
 # decom_method
 method = 'Pramod' # /'Hourly_Ex'/'liu_jordan'
 decom_method = np.array([method for i in range(size)])
@@ -146,10 +142,11 @@ maps = xr.DataArray(maps, dims = ['lat','lon','time'], name = 'pv_power_producti
                     coords={'lat': lat,'lon': lon, 'time':time.values})
 
 maps.attrs['units'] = 'Wh'       
-maps.to_netcdf(r'./output/global_pv_power_' + str(year) + '_daily_lj.nc', 
+maps.to_netcdf(r'./output/global_pv_power_' + str(year) + '_daily_' + method + '.nc', 
                encoding={'pv_power_production': {'zlib': True, 'complevel': 6}}) 
 del maps
 print('finished output',year)
+
 
 
 
