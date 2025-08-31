@@ -122,7 +122,6 @@ class PVsystem:
         with warnings.catch_warnings():
              warnings.simplefilter('ignore')    
              # Must be localized to the Location
-             # !!return UTC time
              suntime = pvlib.solarposition.sun_rise_set_transit_spa(self.local_time, self.lat, self.lon) 
              # ordered by localtime 00：00-23：00
              suntime['time'] = suntime.index.month*10000 + suntime.index.day*100 + suntime.index.hour
@@ -376,6 +375,7 @@ def main(inputs):
         return power
 
     
+
 
 
 
