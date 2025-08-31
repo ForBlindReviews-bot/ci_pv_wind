@@ -99,7 +99,6 @@ def compute_elp_days(data, threshold):
 def generate_resampled_datasets(time_coords):    
     resampled_dates = []
     years = np.arange(1985, 2015)
-    random.seed(42)
     for year_to_remove in years:
         # remove current year
         remaining_years = [y for y in years if y != year_to_remove]
@@ -434,3 +433,4 @@ def get_elp_days(power, climate_model, scenario, years, windows_size, remove_sea
 #     gc.collect()
 
     
+
