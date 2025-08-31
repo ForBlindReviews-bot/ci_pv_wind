@@ -16,7 +16,7 @@ class PVsystem:
         lat: degree  (-90 - 90)  
     '''   
     
-    def __init__(self,year, rs, temp_mean, temp_min, temp_max, wind_speed, lon, lat):           
+    def __init__(self,year, rs, temp_mean, temp_min, temp_max, wind_speed, lon, lat, decom_method):           
         self.rs = abs(rs) * 86400 # --> daily total J/m2
         self.temp_mean = temp_mean - 273.15
         self.temp_min = temp_min - 273.15
@@ -24,6 +24,7 @@ class PVsystem:
         self.wind_speed = wind_speed        
         self.lon = lon
         self.lat = lat
+        self.decom_method = decom_method
 
         
         self.year = year 
@@ -409,7 +410,7 @@ class PVsystem:
     
 # In[1]
 def main(inputs):
-    pixel_type, year, rsds, wind_speed, temp_mean, temp_min, temp_max, lon, lat = inputs[:] 
+    pixel_type, year, rsds, wind_speed, temp_mean, temp_min, temp_max, lon, lat, decom_method = inputs[:] 
     if pixel_type == 1:
         f=PVsystem(year,
                    rsds,
@@ -417,13 +418,15 @@ def main(inputs):
                    temp_min, 
                    temp_max, 
                    wind_speed,
-                   lon,lat)
+                   lon,lat,
+                  decom_method)
 
         power = f.CECmod() * f.Area_ajust() 
         return np.array(power['p_mp'], dtype=np.float32)
     else:
         power=np.array([0]*len(rsds), dtype=np.float32)
         return power
+
 
 
 
