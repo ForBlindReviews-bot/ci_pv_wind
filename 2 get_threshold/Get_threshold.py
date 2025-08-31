@@ -157,7 +157,7 @@ def get_thres(power, climate_model, windows_size, baseline = False, bias = False
     if baseline:
         resample_years = generate_resampled_datasets(daily_data.time)   
     else:
-        resample_years = [[0, np.arange(1985, 2015)]]
+        resample_years = [[0, daily_data.time[daily_data.time.dt.year.isin(np.arange(1985, 2015))]]]
     
     # Create a list of delayed tasks    
     for r in range(len(resample_years)):
@@ -432,4 +432,5 @@ def get_elp_days(power, climate_model, scenario, years, windows_size, remove_sea
 #         get_thres(power, climate_model, windows_size= [15], baseline = True, bias = False, remove_seasonal_cycle=True)
 #         average_r_files(power, climate_model, windows_size= [15], np.arange(1985,2015), baseline=True, bias = False, remove_seasonal_cycle=True)
 #     gc.collect()
+
     
