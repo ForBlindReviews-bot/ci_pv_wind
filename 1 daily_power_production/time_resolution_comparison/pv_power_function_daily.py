@@ -14,10 +14,9 @@ class PVsystem:
         wind_speed: m/s
         lon: degree  (-180 - 180)    
         lat: degree  (-90 - 90)  
-        decom_method: three methods ('Pramod' /'Hourly_Ex'/'liu_jordan') are contained to downscale daily "rs" to hourly "rs" 
     '''   
     
-    def __init__(self,year, rs, temp_mean, temp_min, temp_max, wind_speed, lon, lat, decom_method):           
+    def __init__(self,year, rs, temp_mean, temp_min, temp_max, wind_speed, lon, lat):           
         self.rs = abs(rs) * 86400 # --> daily total J/m2
         self.temp_mean = temp_mean - 273.15
         self.temp_min = temp_min - 273.15
@@ -25,7 +24,6 @@ class PVsystem:
         self.wind_speed = wind_speed        
         self.lon = lon
         self.lat = lat
-        self.decom_method
 
         
         self.year = year 
@@ -41,11 +39,8 @@ class PVsystem:
         self.her = self.HourlyExtraterrestrialRadiation()
         self.der = self.dailyExtraterrestrialRadiation()
         
-        self._module = pvlib.pvsystem.retrieve_sam('SandiaMod').Canadian_Solar_CS5P_220M___2009_ # or 'CECMod'  
-        self._inverter = pvlib.pvsystem.retrieve_sam('SandiaInverter').PV_Powered__PVP2500__240V_
-
-
-        
+        self._module = pvlib.pvsystem.retrieve_sam('CECMod').Jinko_Solar_Co___Ltd_JKM410M_72HL_V  
+      
         
         
     def TimeZone(self):
@@ -66,7 +61,7 @@ class PVsystem:
     
     
     def generating_hour_time(self):
-        # start from 01.01 0:00 local 
+        # start from 01.01 0:00  
         # timezone = self.TimeZone()
         year = self.year
         start_time = datetime.datetime(year, 1, 1, 0) 
@@ -123,8 +118,7 @@ class PVsystem:
     
     
     def SunTime(self):  
-        # function: Calculate the sunrise and sunset time (hour)
-        
+        # function: Calculate the sunrise and sunset time (hour)        
         with warnings.catch_warnings():
              warnings.simplefilter('ignore')    
              # Must be localized to the Location
@@ -132,7 +126,7 @@ class PVsystem:
              suntime = pvlib.solarposition.sun_rise_set_transit_spa(self.local_time, self.lat, self.lon) 
              # ordered by localtime 00：00-23：00
              suntime['time'] = suntime.index.month*10000 + suntime.index.day*100 + suntime.index.hour
-             suntime.sort_values(by = 'time',inplace = True)
+             suntime.sort_values(by = 'time', inplace = True)
              suntime.index = self.time
         
         sunrise_hour = pd.DatetimeIndex(suntime['sunrise'])
@@ -143,9 +137,6 @@ class PVsystem:
     
 
     def dailyExtraterrestrialRadiation(self):
-        # function: Calculate the daily Extraterrestrial Radiation (J/m2)
-        # GB/T37525—2019
-
         ISC = 1366.1 #solar constant (W/m2)
         lat = self.lat          
         
@@ -165,10 +156,7 @@ class PVsystem:
         
     
     
-    def HourlyExtraterrestrialRadiation(self):
-        # function: Calculate the hourly extraterrestrial horizontal solar irradiation (J/m2)
-        # GB/T37525—2019
-  
+    def HourlyExtraterrestrialRadiation(self): 
         ISC = 1366.1 #solar constant (W/m2)
         lat = self.lat
 
@@ -189,47 +177,6 @@ class PVsystem:
         return np.array(I0)
     
     
-    
-    
-    def Hourly_Ex_ratio(self):
-        # Approximately decompose the daily radiation data into hourly values based on the proportion of hourly extraterrestrial radiation.
-
-        her = self.HourlyExtraterrestrialRadiation().copy()
-        her[her<0] = 0
- 
-        # to UTC to match the daily rsds data 
-        her = pd.DataFrame(her)
-        her.index = self.time 
-        with warnings.catch_warnings():
-            warnings.simplefilter('ignore')
-            factor = np.array(her[0]) / np.array(np.repeat(her.groupby(her.index.date).sum()[0],24)) 
-        return factor
-        
-        
-        
-        
-    def liu_jordan_ratio(self):
-        omega = np.radians(self.HourAngle())
-        
-        dayofyear = self.time.dayofyear
-        
-        # declination angle
-        da = pvlib.solarposition.declination_spencer71(dayofyear) 
-        
-        # sunset hour angle
-        x = np.array(-np.tan(self.lat/180 * np.pi) * np.tan(da))
-        x[x>1] = 1
-        x[x<-1] = -1
-        omega_s = np.arccos(x) 
-        
-        numerator = np.pi / 24 * (np.cos(omega) - np.cos(omega_s))
-        denominator = np.sin(omega_s) - omega_s * np.cos(omega_s)
-        
-        lj_ratio = numerator / denominator
-        lj_ratio[lj_ratio<0]=0
-        return lj_ratio
-        
-        
         
     
     
@@ -248,12 +195,12 @@ class PVsystem:
         her.index = self.time
         with warnings.catch_warnings():
             warnings.simplefilter('ignore')
-            factor = np.array(her[0]) / np.array(np.repeat(her.groupby(her.index.date).sum()[0],24))         
+            factor = np.array(her[0]) / np.array(np.repeat(her.groupby(her.index.date).sum()[0],24)) 
+            factor[np.isnan(factor)] = 1
         return factor
     
     
     
-
 
     def kd(self):
         # function: using BRL model to caculate the fraction of diffuse solar radiation from global solar radiation
@@ -270,29 +217,17 @@ class PVsystem:
         rs = self.rs
         hourly_d_rs = np.repeat(rs, 24)
 
-        
-        if self.decom_method == 'Hourly_Ex':
-            factor = self.Hourly_Ex_ratio()
-            
-        if self.decom_method == 'liu_jordan':
-            factor = self.liu_jordan_ratio()
-            
-        if self.decom_method == 'Pramod':
-            factor = self.Pramod_ratio()
-            
+        factor = self.Pramod_ratio()
         rs_hourly = factor * hourly_d_rs
-        
-        
+            
         # para
         I0 = np.where(self.der == 0, 1, self.der)
-
-        
+      
         # daily clearness index        
         Kt = np.array(hourly_d_rs)/I0
         
         # hourly clearness index
         kt = np.clip(rs_hourly / self.her, 0, 1)
-
 
         #apparent solar time
         AST = (self.hourangle / 15) + 12
@@ -309,14 +244,6 @@ class PVsystem:
         return k, rs_hourly  
    
     
-   
-    def Airmass(self):
-        #function: Calculate absolute (not pressure-adjusted) airmass at sea level.       
-        solar_zenith_angle = self.sunpath['apparent_zenith']
-        airmass_relative = pvlib.atmosphere.get_relative_airmass(solar_zenith_angle)
-        airmass = pvlib.atmosphere.get_absolute_airmass(airmass_relative)
-        airmass[(pd.isna(airmass))| (solar_zenith_angle>=89)] = 1
-        return airmass
             
 
     def Fixed(self):
@@ -334,18 +261,10 @@ class PVsystem:
         solar_zenith_angle = self.sunpath['apparent_zenith']
         solar_azimuth_angle = self.sunpath['azimuth']
 
-        dhi = rs_hourly * k / 3600 #To convert to watts per square metre (W m-2).
-        ghi = (rs_hourly / 3600 - dhi) 
-        
-        theta = np.cos( solar_zenith_angle / 180 * np.pi)    
-        theta[(theta>0)&(theta<0.1)] = 0.1 
-        dni = ghi / np.cos( theta / 180 * np.pi)    
-        
-
-        ISC = 1366.1 #solar constant (W/m2)
-        E0 = ISC * (1 + 0.033 * np.cos(2 * np.pi * self.dayofyear / 365)) #W/m2
-        dni[dni>E0] = E0[dni>E0]
-        dni[dni<0] = 0
+        ghi = rs_hourly / 3600 
+        dhi = rs_hourly * k / 3600 
+        dni = pvlib.irradiance.dni(ghi, dhi, np.array(solar_zenith_angle))
+        dni[pd.isna(dni)] = 0
                
         if lat >= 0:
             panel_azimuth = 180 #facing south
@@ -360,10 +279,9 @@ class PVsystem:
         ipoa = pvlib.irradiance.get_total_irradiance( tilt,
                                                       panel_azimuth, 
                                                       solar_zenith_angle, solar_azimuth_angle,            
-                                                      dni = dni, ghi = ghi, dhi = dhi, model = 'king',
-                                                      surface_type = 'concrete' )     
-        aoi = pvlib.irradiance.aoi(tilt,panel_azimuth,solar_zenith_angle, solar_azimuth_angle)
-        ipoa['aoi'] = aoi    
+                                                      dni = dni, ghi = ghi, dhi = dhi, model = 'king' )     
+        aoi = pvlib.irradiance.aoi(tilt, panel_azimuth, solar_zenith_angle, solar_azimuth_angle)
+        ipoa['aoi'] = aoi   
         return ipoa
     
     
@@ -388,63 +306,50 @@ class PVsystem:
         t = np.where(t > 0, t * ratio_max, t * ratio_min)
         return t + temp_mean  
             
-  
-    def PVSystem_sapm_celltemp(self, poa_global):     
-        
+
+    
+    def PVSystem_sapm_celltemp(self, poa_global):    
         temp = np.array([self.dailyTemp2hourlyTemp(self.temp_mean[i], self.temp_max[i], self.temp_min[i])
                             for i in range(len(self.temp_mean))
                         ]).reshape(-1)
         
         
         # function: cell temperature
-        a, b, deltaT = (-2.98, -0.0471, 1)  # glass_glass/cell, close roof mount
+        a, b, deltaT = (-2.98, -0.0471, 1)  
         wind_speed_h = np.repeat(self.wind_speed, 24)
-        temp_cell = pvlib.temperature.sapm_cell(poa_global, temp, wind_speed_h, a, b, deltaT, irrad_ref=1000.)
+        temp_cell = pvlib.temperature.sapm_cell(poa_global, temp, wind_speed_h, a, b, deltaT)
         return temp_cell
     
 
     
-    def sapm(self):
-        '''
-        The Sandia PV Array Performance Model (SAPM) 
-        '''
-   
+    def CECmod(self):
         Fixed = self.Fixed()
-        airmass_absolute = self.Airmass()
-        effective_irradiance = pvlib.pvsystem.sapm_effective_irradiance(Fixed['poa_direct'], 
-                                                                        Fixed['poa_diffuse'], 
-                                                                        airmass_absolute, 
-                                                                        Fixed['aoi'], 
-                                                                        self._module)
-        
-        
-        temp_cell = self.PVSystem_sapm_celltemp(Fixed['poa_global']) 
-        para = pvlib.pvsystem.sapm( effective_irradiance, temp_cell, self._module)
-        return para
+        iam_modifier = pvlib.iam.physical(Fixed['aoi'])
+        module = self._module
+        fd = module.get('FD', 1.0)    
+        effective_irradiance = 1*(Fixed['poa_direct'] * iam_modifier +
+                                    fd * Fixed['poa_diffuse'])    
+        temp_cell = self.PVSystem_sapm_celltemp(Fixed['poa_global'])
 
-         
-    def DC2AC(self):
-        # function: Convert DC power and voltage to AC power using Sandia's Grid-Connected PV Inverter model.
-        #  Returns
-        #  -------
-        #  power_ac : numeric [ Wh /d ]
-        #  AC power output. [ Wh /d ]
-
-        dc_para = self.sapm()
-        p_dc = dc_para['i_mp'] * dc_para['v_mp']
-        power_ac = pvlib.inverter.sandia(dc_para['v_mp'], p_dc, self._inverter) 
-        
-        # to daily total
-        daily_power_ac = power_ac.groupby(power_ac.index.dayofyear).sum() 
-        return daily_power_ac
+        IL, I0, Rs, Rsh, nNsVth = pvlib.pvsystem.calcparams_cec(
+            effective_irradiance, temp_cell,
+            alpha_sc=module['alpha_sc'],
+            a_ref=module['a_ref'],
+            I_L_ref=module['I_L_ref'],
+            I_o_ref=module['I_o_ref'],
+            R_sh_ref=module['R_sh_ref'],
+            R_s=module['R_s'],
+            Adjust=module['Adjust']
+        )
+    
+        power_dc = pvlib.pvsystem.singlediode(IL, I0, Rs, Rsh, nNsVth)['p_mp'] 
+        daily_power_dc = power_dc.groupby(power_dc.index.dayofyear).sum()
+        return daily_power_dc 
 
     
     
     def Area_ajust(self):
-        # funtion: available area / module area
-        # modules = pvlib.pvsystem.retrieve_sam('SandiaMod') # or 'CECMod'
-        # module = modules.Canadian_Solar_CS5P_220M___2009_
-        Area_ajust = 1 / self._module.Area               
+        Area_ajust = 1 / self._module.A_c               
         return Area_ajust
 
     
@@ -456,7 +361,7 @@ class PVsystem:
     
 # In[1]
 def main(inputs):
-    pixel_type, year, rsds, wind_speed, temp_mean, temp_min, temp_max, lon, lat, decom_method = inputs[:] 
+    pixel_type, year, rsds, wind_speed, temp_mean, temp_min, temp_max, lon, lat = inputs[:] 
     if pixel_type == 1:
         f=PVsystem(year,
                    rsds,
@@ -464,14 +369,11 @@ def main(inputs):
                    temp_min, 
                    temp_max, 
                    wind_speed,
-                   lon,lat,
-                   decom_method)
+                   lon,lat)
 
-        power = f.DC2AC() * f.Area_ajust() #unit: wh
-        return np.array(power, dtype=np.float32)
+        power = f.CECmod() * f.Area_ajust() 
+        return np.array(power['p_mp'], dtype=np.float32)
     else:
         power=np.array([0]*len(rsds), dtype=np.float32)
         return power
-
-    
 
