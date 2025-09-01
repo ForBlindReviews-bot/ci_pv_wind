@@ -35,7 +35,7 @@ class PVsystem:
         
         self.hourangle = self.HourAngle()
         self.sunpath = self.Sunpath()
-        # self.sunrise_hour, self.sunset_hour = self.SunTime()
+        self.sunrise_hour, self.sunset_hour = self.SunTime()
         
         self.her = self.HourlyExtraterrestrialRadiation()
         self.der = self.dailyExtraterrestrialRadiation()
@@ -285,7 +285,11 @@ class PVsystem:
         alpha = np.array(self.sunpath['apparent_elevation'])
         
         #persistence of the sky conditions
-        phi = kt
+        phi = np.convolve(kt, np.array([1/2, 1/2]), mode='full')[:-1]
+        phi[self.time.hour==self.sunrise_hour.hour] = kt[self.time.hour==self.sunrise_hour.hour]
+        phi[self.time.hour==self.sunset_hour.hour] = kt[self.time.hour==self.sunset_hour.hour]
+        phi[self.time.hour<self.sunrise_hour.hour] = 0
+        phi[self.time.hour>self.sunset_hour.hour] = 0
 
         with warnings.catch_warnings():
             warnings.simplefilter('ignore')
@@ -426,6 +430,7 @@ def main(inputs):
     else:
         power=np.array([0]*len(rsds), dtype=np.float32)
         return power
+
 
 
 
