@@ -123,9 +123,9 @@ class PVsystem:
         da = pvlib.solarposition.declination_spencer71(self.local_doy) 
         
         # hour angle
-        HourAngle = self.HourAngle()
-        w1 = HourAngle
-        w2 = np.hstack((HourAngle[1:],HourAngle[-1:]+15))
+        HourAngles = self.HourAngle()
+        w1 = HourAngles
+        w2 = np.hstack((HourAngles[1:],HourAngles[-1:]+15))
 
         error = ((w2-w1)<14) | ((w2-w1)>16)
         w2[error] = w1[error]+15
@@ -299,6 +299,7 @@ def main(inputs):
     else:
         power=np.array([0]*len(rsds),dtype=np.float32)
         return power
+
 
 
 
