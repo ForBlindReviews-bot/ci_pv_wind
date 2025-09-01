@@ -34,7 +34,7 @@ class PVsystem:
         
         self.hourangle = self.HourAngle()
         self.sunpath = self.Sunpath()
-        # self.sunrise_hour, self.sunset_hour = self.SunTime()
+        self.sunrise_hour, self.sunset_hour = self.SunTime()
         
         self.her = self.HourlyExtraterrestrialRadiation()
         self.der = self.dailyExtraterrestrialRadiation()
@@ -93,9 +93,6 @@ class PVsystem:
     def HourAngle(self):   
         # function: Calculate the solar hour Angle
         # return: solar hour angle (degree)
-    
-        # dayofyear = self.time.dayofyear
-        
         # eot--> :Soteris A. Kalogirou, "Solar Energy Engineering Processes and Systems, 
         #            2nd Edition" Elselvier/Academic Press (2009).
         eot = pvlib.solarposition.equation_of_time_pvcdrom(self.dayofyear)/60 # min --> hour
@@ -111,6 +108,7 @@ class PVsystem:
         # function: Calculate the zenith, elevation, equation_of_time
         # ! Must be localized or UTC will be assumed.
         ephem_data = pvlib.location.Location(self.lat, self.lon).get_solarposition(self.local_time)
+        # ordered by localtime 00：00-23：00
         ephem_data['time'] = ephem_data.index.month*10000 + ephem_data.index.day*100 + ephem_data.index.hour
         ephem_data.sort_values(by = 'time',inplace = True)
         ephem_data.index = self.time
@@ -129,8 +127,7 @@ class PVsystem:
              suntime.index = self.time
         
         sunrise_hour = pd.DatetimeIndex(suntime['sunrise'])
-        sunset_hour = pd.DatetimeIndex(suntime['sunset'])
-   
+        sunset_hour = pd.DatetimeIndex(suntime['sunset'])   
         return sunrise_hour, sunset_hour   
 
     
@@ -226,14 +223,18 @@ class PVsystem:
         # hourly clearness index
         kt = np.clip(rs_hourly / self.her, 0, 1)
 
-        #apparent solar time
+        # apparent solar time
         AST = (self.hourangle / 15) + 12
         
-        #solar altitude angle
+        # solar altitude angle
         alpha = np.array(self.sunpath['apparent_elevation'])
         
-        #persistence of the sky conditions
-        phi = kt
+        # persistence of the sky conditions
+        phi = np.convolve(kt, np.array([1/2, 1/2]), mode='full')[:-1]
+        phi[self.time.hour==self.sunrise_hour.hour] = kt[self.time.hour==self.sunrise_hour.hour]
+        phi[self.time.hour==self.sunset_hour.hour] = kt[self.time.hour==self.sunset_hour.hour]
+        phi[self.time.hour<self.sunrise_hour.hour] = 0
+        phi[self.time.hour>self.sunset_hour.hour] = 0
 
         with warnings.catch_warnings():
             warnings.simplefilter('ignore')
@@ -266,7 +267,7 @@ class PVsystem:
         if lat >= 0:
             panel_azimuth = 180 #facing south
             #source: World estimates of PV optimal tilt angles and ratios of sunlight incident
-                     #upon tilted and tracked PV panels relative to horizontal panels.2018
+            #        upon tilted and tracked PV panels relative to horizontal panels.2018
             tilt = 1.3793 + lat * (1.2011 + lat * (-0.014404 + lat * 0.000080509))
         else:
             panel_azimuth = 0 #facing north
@@ -375,6 +376,7 @@ def main(inputs):
         return power
 
     
+
 
 
 
