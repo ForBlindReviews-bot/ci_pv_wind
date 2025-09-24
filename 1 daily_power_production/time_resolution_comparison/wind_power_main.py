@@ -82,9 +82,10 @@ alpha_map = alpha_map.isel(lat=alpha_map.lat > -60)
 # expand to daily and hourly
 if hourly:
     alpha_map = alpha_map.sel(season = wind_speed["valid_time"].dt.season)
-    
+    time = wind_speed.valid_time.values
 if daily:      
     alpha_map = alpha_map.sel(season = wind_speed["time"].dt.season)
+    time = wind_speed.time.values
 
 
 
@@ -96,7 +97,7 @@ size = wind_speed.shape[1] * wind_speed.shape[2]
 lat = wind_speed.latitude.values
 lon = wind_speed.longitude.values
 lons, lats = np.meshgrid(lon,lat) 
-time = wind_speed.time.values
+
 
 
 # combine and convert to list
@@ -131,5 +132,6 @@ if daily:
     maps.to_netcdf(r'./output/global_wind_power_' + str(year) +'_daily.nc', 
                    encoding={'wind_power_production': {'zlib': True, 'complevel': 6}}) 
 print('finished output', year)  
+
 
 
