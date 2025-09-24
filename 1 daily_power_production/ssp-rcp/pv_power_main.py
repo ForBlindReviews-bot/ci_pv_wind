@@ -53,7 +53,7 @@ scenario = ['historical', 'ssp126', 'ssp245', 'ssp370', 'ssp585']
 #                   #'CNRM-ESM2-1','GISS-E2-1-G', 
 #                   'MPI-ESM1-2-HR', 'UKESM1-0-LL',
 #                   'MRI-ESM2-0', 'NorESM2-MM']
-climate_models = 'MRI-ESM2-0'            
+climate_models = 'ACCESS-ESM1-5'            
 
 for s in [0,1,2,3]:
     if s == 0:
@@ -93,6 +93,8 @@ for s in [0,1,2,3]:
         rsds.coords['lon'] = (rsds.coords['lon'] + 180) % 360 - 180
         rsds = rsds.sortby(rsds.lon) 
         rsds = rsds.sortby(rsds.lat, ascending = False) 
+        rsds.values[rsds.values<0] = 0
+        rsds.values[rsds.values>600] = 600
     
         
         
@@ -119,7 +121,8 @@ for s in [0,1,2,3]:
         
         years = [year for i in range(size)]
 
-        
+        quick_pmp = [1 for i in range(size)] 
+        hourly_output = [0 for i in range(size)] 
 
         
         # combine
@@ -133,7 +136,8 @@ for s in [0,1,2,3]:
                                tasmax.values.reshape(tasmax.shape[0],-1).T,                         
                                lons.reshape(-1).T, 
                                lats.reshape(-1).T,
-                                                        
+                               quick_pmp,
+                               hourly_output                                                        
                            )), dtype=object)
 
         del tasmax, tasmin, tas, wind_speed, rsds
