@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
-
 import os
 os.chdir(r'...')
 
 import pandas as pd
 import numpy as np
 import datetime
-import re
 import gc
 
 # multi_process
@@ -17,7 +15,6 @@ def multi_process(prim):
     results = pool.map( pv_power_function_hourly.main, prim)
     out = list(results)
     return out
-
 
 
 import xarray as xr
@@ -71,7 +68,8 @@ input_para = np.array(list(zip(pixel_type.reshape(-1).T,
                                wind_speed.values.reshape(wind_speed.shape[0],-1).T, 
                                tas.values.reshape(tas.shape[0],-1).T, 
                                lons.reshape(-1).T, 
-                               lats.reshape(-1).T,                               
+                               lats.reshape(-1).T,
+                               
                            )), dtype=object)
 del tas, wind_speed, rsds, times
 gc.collect()
@@ -91,15 +89,14 @@ maps = xr.DataArray(maps, dims = ['lat','lon','time'], name = 'pv_power_producti
                     coords={'lat': lat,'lon': lon, 'time':time})
 
 maps.attrs['units'] = 'W'       
-maps.to_netcdf(r'./output/global_pv_power_' + str(year) + '_hourly.nc', 
+maps.to_netcdf(r'./output/global_pv_power_' + str(year) + '_hourly_r4.nc', 
                encoding={'pv_power_production': {'zlib': True, 'complevel': 6}}) 
 print('finished output', year)
 
-
-maps = xr.open_dataset(r'./output/global_pv_power_' + str(year) + '_hourly.nc').chunk({"time": -1})
+maps = xr.open_dataset(r'./output/global_pv_power_' + str(year) + '_hourly_r4.nc').chunk({"time": -1})
 maps = maps.assign_coords(doy = maps["time"].dt.dayofyear)
-maps = maps.groupby("doy").sum().compute()
-maps.attrs['units'] = 'Wh'  
-maps.to_netcdf(r'./output/global_pv_power_2010_hourly_agg_to_daily.nc', 
+maps = maps.groupby("doy").mean().compute()
+maps.attrs['units'] = 'W'  
+maps.to_netcdf(r'./output/global_pv_power_2010_hourly_agg_to_daily_r4.nc', 
                 encoding={'pv_power_production': {'zlib': True, 'complevel': 6}})
 print('finished output aggdaily', year)
