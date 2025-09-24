@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-
 import os
 os.chdir(r'...')
 
@@ -63,7 +62,7 @@ scenario = ['historical', 'ssp126', 'ssp245', 'ssp370']
 #                   'MPI-ESM1-2-HR', 'UKESM1-0-LL',
 #                   'MRI-ESM2-0', 'NorESM2-MM']
 
-climate_models = 'UKESM1-0-LL' 
+climate_models = 'ACCESS-ESM1-5' 
 
 for s in [0,1,2,3]:
     
@@ -133,8 +132,7 @@ for s in [0,1,2,3]:
         #
         # read power law exponent 
         alpha_map = xr.open_dataset('./sensitivity/output/alpha/alpha_mean_season_1985-2014.nc')['alpha']
-        alpha_map = alpha_map.isel(lat = alpha_map.lat > -60)
-        # expand to daily and hourly  
+        alpha_map = alpha_map.isel(lat = alpha_map.lat > -60)        
         alpha_map = alpha_map.sel(season = wind_speed["time"].dt.season)
         alpha_map = alpha_map.groupby_bins('lon', bins_x).mean().groupby_bins('lat', bins_y).mean()
         alpha_map = alpha_map.sortby(alpha_map.lat_bins,ascending= False)
@@ -155,7 +153,7 @@ for s in [0,1,2,3]:
         
 
          
-        r = multi_process(input_para)#[189542:189642]
+        r = multi_process(input_para)
         print(datetime.datetime.now() - t)
         
         maps = np.array(r, dtype = np.float32).reshape(wind_speed.shape[1], wind_speed.shape[2], days)
