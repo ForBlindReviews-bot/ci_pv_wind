@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-
 import numpy as np
 import pandas as pd
 import windpowerlib as wt
@@ -14,7 +13,7 @@ class windpower:
     '''
     input parameters
     ----------
-        tas: daily mean air temperature at 2m height (K)                                               
+        tas: near-surface daily mean air temperature at 2m height (K)                                               
         dem：m      
         wind_speed: daily mean wind speed at 10m height (m/s)
         pl_exponent: power law exponent
@@ -81,19 +80,14 @@ class windpower:
     
     def get_temp_at_hub_height(self):
         r"""
-        Calculates the temperature at hub height using a linear gradient. (windpowerlib
+        Calculates the temperature at hub height using a linear gradient. (windpowerlib)
     
-        A linear temperature gradient of -6.5 K/km (-0.0065 K/m) is assumed. This function is
-        carried out when the parameter `temperature_model` of an instance of
-        the :class:`~.modelchain.ModelChain` class is
-        'temperature_gradient'.
+        A linear temperature gradient of -6.5 K/km (-0.0065 K/m) is assumed. 
     
         Parameters
         ----------
         temperature : :pandas:`pandas.Series<series>` or numpy.array
             Air temperature in K.
-        temperature_height : float
-            Height in m for which the parameter `temperature` applies.
         hub_height : float
             Hub height of wind turbine in m.
     
@@ -116,8 +110,6 @@ class windpower:
         ----------
         pressure : :pandas:`pandas.Series<series>` or numpy.array
             Air pressure in Pa.
-        pressure_height : float
-            Height in m for which the parameter `pressure` applies.
         hub_height : float
             Hub height of wind turbine in m.
         temperature_hub_height : :pandas:`pandas.Series<series>` or numpy.array
