@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-
 import numpy as np
 import pandas as pd
 import windpowerlib as wt
@@ -81,7 +80,7 @@ class windpower:
     
     def get_temp_at_hub_height(self):
         r"""
-        Calculates the temperature at hub height using a linear gradient.
+        Calculates the temperature at hub height using a linear gradient. (windpowerlib
     
         A linear temperature gradient of -6.5 K/km (-0.0065 K/m) is assumed. This function is
         carried out when the parameter `temperature_model` of an instance of
