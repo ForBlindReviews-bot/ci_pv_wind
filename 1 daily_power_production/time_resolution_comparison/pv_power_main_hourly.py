@@ -95,8 +95,9 @@ print('finished output', year)
 
 maps = xr.open_dataset(r'./output/global_pv_power_' + str(year) + '_hourly_r4.nc').chunk({"time": -1})
 maps = maps.assign_coords(doy = maps["time"].dt.dayofyear)
-maps = maps.groupby("doy").mean().compute()
-maps.attrs['units'] = 'W'  
+maps = maps.groupby("doy").sum().compute()
+maps.attrs['units'] = 'Wh'  
 maps.to_netcdf(r'./output/global_pv_power_2010_hourly_agg_to_daily_r4.nc', 
                 encoding={'pv_power_production': {'zlib': True, 'complevel': 6}})
 print('finished output aggdaily', year)
+
