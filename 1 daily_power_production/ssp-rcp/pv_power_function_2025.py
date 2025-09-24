@@ -5,6 +5,7 @@ import datetime
 import pvlib
 import warnings
 
+CECmod = pvlib.pvsystem.retrieve_sam('CECMod')
 class PVsystem:
     '''
     input parameters:  
@@ -16,7 +17,7 @@ class PVsystem:
         lat: degree  (-90 - 90)  
     '''   
     
-    def __init__(self,year, rs, temp_mean, temp_min, temp_max, wind_speed, lon, lat):           
+    def __init__(self,year, rs, temp_mean, temp_min, temp_max, wind_speed, lon, lat, quick_pmp, hourly_output):           
         self.rs = abs(rs) * 86400 # --> daily total J/m2
         self.temp_mean = temp_mean - 273.15
         self.temp_min = temp_min - 273.15
@@ -39,7 +40,10 @@ class PVsystem:
         self.her = self.HourlyExtraterrestrialRadiation()
         self.der = self.dailyExtraterrestrialRadiation()
         
-        self._module = pvlib.pvsystem.retrieve_sam('CECMod').Jinko_Solar_Co___Ltd_JKM410M_72HL_V  
+        self._module = CECmod.Jinko_Solar_Co___Ltd_JKM410M_72HL_V  
+        
+        self.quick_pmp = quick_pmp
+        self.hourly_output = hourly_output
       
         
         
@@ -47,8 +51,8 @@ class PVsystem:
         #function: Divide the time zone by longitude
         lon = self.lon
         
-        if lon < -180 or lon > 360:
-            lon = 0
+        if lon < -180:
+            lon = -180
         if lon > 180:
             lon -= 360       
             
@@ -108,7 +112,7 @@ class PVsystem:
         # function: Calculate the zenith, elevation, equation_of_time
         # ! Must be localized or UTC will be assumed.
         ephem_data = pvlib.location.Location(self.lat, self.lon).get_solarposition(self.local_time)
-        # ordered by localtime 00：00-23：00
+        # ordered by localtime 00：00-23：00; 
         ephem_data['time'] = ephem_data.index.month*10000 + ephem_data.index.day*100 + ephem_data.index.hour
         ephem_data.sort_values(by = 'time',inplace = True)
         ephem_data.index = self.time
@@ -202,7 +206,7 @@ class PVsystem:
         # function: using BRL model to caculate the fraction of diffuse solar radiation from global solar radiation      
         # Lauret et al.2013 Bayesian statistical analysis applied to solar radiation modelling. 
         beta0 = -5.32
-        beta1 = 7.2
+        beta1 = 7.28
         beta2 = -0.03
         beta3 = -0.0047
         beta4 = 1.72
@@ -284,8 +288,7 @@ class PVsystem:
     
     
 
-    def dailyTemp2hourlyTemp(self, temp_mean, temp_max, temp_min): 
-        
+    def dailyTemp2hourlyTemp(self, temp_mean, temp_max, temp_min):         
         time_arange = np.array([24] + list(np.arange(1, 24, 1)))
         a = 2 * np.pi / 24 * time_arange
         cos_terms = (
@@ -339,10 +342,27 @@ class PVsystem:
             R_s=module['R_s'],
             Adjust=module['Adjust']
         )
-    
-        power_dc = pvlib.pvsystem.singlediode(IL, I0, Rs, Rsh, nNsVth)['p_mp'] 
-        daily_power_dc = power_dc.groupby(power_dc.index.dayofyear).sum()
-        return daily_power_dc 
+        
+        if self.quick_pmp == 1:
+            # only calculate p_mp using bishop88_mpp function
+            # defalt method: newton
+            # See pvlib.singlediode.bishop88_mpp
+            args = (IL, I0, Rs, Rsh, nNsVth)
+            i_mp, v_mp, p_mp = pvlib.singlediode.bishop88_mpp(
+                                                            *args, 
+                                                        )
+            power_dc = pd.DataFrame(p_mp, index=effective_irradiance.index,columns=['p_mp'])['p_mp'] 
+        else:
+            # Please note that the input values should be within the reasonable range; otherwise, it may cause overflow. 
+            # See pvlib.pvsystem.singlediode
+            # output: ['i_sc', 'v_oc', 'i_mp', 'v_mp', 'p_mp', 'i_x', 'i_xx'], defalt output: 'p_mp'
+            power_dc = pvlib.pvsystem.singlediode(IL, I0, Rs, Rsh, nNsVth)['p_mp']             
+            
+            
+        if self.hourly_output == 0:            
+            power_dc = power_dc.groupby(power_dc.index.dayofyear).sum()    
+            
+        return power_dc 
 
     
     
@@ -355,11 +375,8 @@ class PVsystem:
     
     
     
-    
-    
-# In[1]
 def main(inputs):
-    pixel_type, year, rsds, wind_speed, temp_mean, temp_min, temp_max, lon, lat = inputs[:] 
+    pixel_type, year, rsds, wind_speed, temp_mean, temp_min, temp_max, lon, lat, quick_pmp, hourly_output = inputs[:] 
     if pixel_type == 1:
         f=PVsystem(year,
                    rsds,
@@ -367,10 +384,12 @@ def main(inputs):
                    temp_min, 
                    temp_max, 
                    wind_speed,
-                   lon,lat)
+                   lon,lat,
+                   quick_pmp,
+                   hourly_output)
 
         power = f.CECmod() * f.Area_ajust() 
-        return np.array(power['p_mp'], dtype=np.float32)
+        return np.array(power, dtype=np.float32)
     else:
         power=np.array([0]*len(rsds), dtype=np.float32)
         return power
