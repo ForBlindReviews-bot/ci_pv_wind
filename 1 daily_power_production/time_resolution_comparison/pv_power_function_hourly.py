@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-
 import numpy as np
 import pandas as pd
 import datetime
@@ -41,8 +40,8 @@ class PVsystem:
         #function: Divide the time zone by longitude
         lon = self.lon
         
-        if lon < -180 or lon > 360:
-            lon = 0
+        if lon < -180:
+            lon = -180
         if lon > 180:
             lon -= 360       
             
@@ -268,7 +267,14 @@ class PVsystem:
             Adjust=module['Adjust']
         )
     
-        power_dc = pvlib.pvsystem.singlediode(IL, I0, Rs, Rsh, nNsVth)['p_mp'] 
+        # only calculate p_mp using bishop88_mpp function
+        # defalt method: newton
+        # See pvlib.singlediode.bishop88_mpp
+        args = (IL, I0, Rs, Rsh, nNsVth)
+        i_mp, v_mp, p_mp = pvlib.singlediode.bishop88_mpp(
+                                                        *args, 
+                                                    )
+        power_dc = pd.DataFrame(p_mp, index=effective_irradiance.index,columns=['p_mp'])['p_mp'] 
         return power_dc 
 
     
@@ -293,8 +299,8 @@ def main(inputs):
                    lon,
                    lat)
 
-        power=f.CECmod() * f.Area_ajust() 
-        return np.array(power['p_mp'], dtype=np.float32)
+        power = f.CECmod() * f.Area_ajust() 
+        return np.array(power, dtype=np.float32)
     
     else:
         power=np.array([0]*len(rsds),dtype=np.float32)
