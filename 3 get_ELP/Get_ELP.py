@@ -5,7 +5,6 @@ import numpy as np
 import pandas as pd
 import datetime
 import xarray as xr
-from joblib import Parallel, delayed
 from scipy.sparse import coo_matrix
 import warnings
 warnings.filterwarnings('ignore')
@@ -46,8 +45,8 @@ def main(power, climate_model, scenario, year, thresholds, clim_aves):
     # Generate the event information table and annual maps
     #
     # define save path and name    
-    save_path = os.path.join(r'./ELP_event/events', power) 
-    save_name = 'ELPevent_' +  scenario + '_' + str(year) + '_' + climate_model + '.npy'
+    save_path = os.path.join(r'./ELP_event/maps', power+'_new') 
+    save_name = 'ELPevent_info_' +  scenario + '_' + str(year) + '_' + climate_model + '.nc'
     
     if os.path.exists(os.path.join(save_path, save_name)):
         print('file exits')
@@ -125,7 +124,7 @@ def main(power, climate_model, scenario, year, thresholds, clim_aves):
         df['power_production'][df['power_production']<0] = 0 
 
 
-        # Event-ID
+        # add event_id
         df = df.sort_values(by=['lon_index', 'lat_index']).reset_index(drop=True)
         df['event_ID'] = renumber_continuous(df['doy'])       
         
@@ -155,7 +154,7 @@ def main(power, climate_model, scenario, year, thresholds, clim_aves):
         if np.isinf(np.max(df[:,1:])):
             df = np.array(extreme_event, dtype=np.float32)
 
-        np.save(os.path.join(save_path, save_name), df)
+        #np.save(os.path.join(save_path, save_name), df)
         print('finished: save event.npy', power, climate_model, scenario, year)
   
 
@@ -171,13 +170,13 @@ def main(power, climate_model, scenario, year, thresholds, clim_aves):
                                      ds['lon_index'].astype(int), 
                                      ds['power_gap']))       
         elp =  reconstruct_2d_array(index_value_pairs, lat_length, lon_length) 
-        
-        # max elp
+
+        # elp-max
         index_value_pairs = list(zip(dmax['lat_index'].astype(int), 
                                      dmax['lon_index'].astype(int), 
                                      dmax['power_gap']))       
-        elp_max =  reconstruct_2d_array(index_value_pairs, lat_length, lon_length)  
-
+        elp_max =  reconstruct_2d_array(index_value_pairs, lat_length, lon_length) 
+        
         # total days
         index_value_pairs = list(zip(ds['lat_index'].astype(int), 
                                      ds['lon_index'].astype(int), 
@@ -225,16 +224,16 @@ def main(power, climate_model, scenario, year, thresholds, clim_aves):
 
         #
         maps = np.concatenate(( elp.reshape(1, lat_length, lon_length), 
-                                elp_max.reshape(1, lat_length, lon_length), 
+                                elp_max.reshape(1, lat_length, lon_length),
                                 total_days.reshape(1, lat_length, lon_length), 
                                 duration.reshape(1, lat_length, lon_length), 
                                 duration_max.reshape(1, lat_length, lon_length), 
                                 frequency.reshape(1, lat_length, lon_length), 
                                 intensity_ab.reshape(1, lat_length, lon_length),
-                                intensity_re.reshape(1, lat_length, lon_length),
+                                intensity_re.reshape(1, lat_length, lon_length)),
                               axis=0, dtype=np.float32) 
 
-        var_names = ['ELP', 'ELP_max',  'total_days', 'duration_ave', 'duration_max', 'frequency', 'intensity_ab_ave', 'intensity_re_ave']
+        var_names = ['ELP', 'ELP_max', 'total_days', 'duration_ave', 'duration_max', 'frequency', 'intensity_ab_ave', 'intensity_re_ave']
         maps = xr.Dataset(
                             {var_names[i]: (["lat", "lon"], maps[i,:,:]) for i in range(len(var_names))}, 
                             coords={
@@ -248,13 +247,13 @@ def main(power, climate_model, scenario, year, thresholds, clim_aves):
             maps.attrs['unit_for_absolute_value'] = 'W'  
 
         if power == 'pv':
-            maps.attrs['unit_for_absolute_value'] = 'Wh per m2' 
+            maps.attrs['unit_for_absolute_value'] = 'Wh' 
         
         
         save_path = './ELP_event/maps'
         file_name = 'ELPevent_info_' +  scenario + '_' + str(year) + '_' + climate_model + '.nc'
 
-        maps.to_netcdf(os.path.join(save_path, power, file_name),
+        maps.to_netcdf(os.path.join(save_path, power+'_new', file_name),
                        encoding={var_names[i]: {'zlib': True, 'complevel': 6} for i in range(len(var_names))})   
         print('finished: save map.nc', power, climate_model, scenario, year)
 
@@ -262,93 +261,93 @@ def main(power, climate_model, scenario, year, thresholds, clim_aves):
 
 
             
-
+'''
 #
-# --------- main 
+# main line
 #
-# power = 'wind' #or 'pv'
-# scenarios = ['ssp126', 'ssp245', 'ssp370']
-# start_years = [2015, 2015, 2015]
-# end_years = [2100, 2100, 2100]
+power = 'pv'
+scenarios = ['ssp126', 'ssp245', 'ssp370']
+start_years = [2015, 2015, 2015]
+end_years = [2100, 2100, 2100]
 
 
-# climate_models = [
+climate_models = [
 #                  'ACCESS-ESM1-5',
 #                   'BCC-CSM2-MR', 
 #                  'CanESM5',
 #                  'CMCC-ESM2', 'EC-Earth3',
 #                  'FGOALS-g3', 
-#                    'GFDL-ESM4', 'INM-CM4-8', 
+                    'GFDL-ESM4', 
+#                  'INM-CM4-8', 
 #                  'IPSL-CM6A-LR',  'MIROC6',
 #                  'CNRM-ESM2-1',
 #                   'GISS-E2-1-G',
 #                   'KACE-1-0-G',
-#                  'MPI-ESM1-2-HR', 'UKESM1-0-LL',
+#                  'MPI-ESM1-2-HR', 
+#                  'UKESM1-0-LL',
 #                  'MRI-ESM2-0', 
 #                  'NorESM2-MM', 
-#                  ] 
+                 ] 
 
-# for c in range(0, len(climate_models)):    
-#     climate_model = climate_models[c]
+for c in range(0, len(climate_models)):    
+    climate_model = climate_models[c]
     
-#     # -------- baseline
-#     scenario = 'historical'
-#     start_year = 1985
-#     end_year = 2014
-#     time_range = np.arange(start_year, end_year+1)  
+    # -------- baseline
+    scenario = 'historical'
+    start_year = 1985
+    end_year = 2014
+    time_range = np.arange(start_year, end_year+1)  
     
-#     for year in time_range:        
-#         # read thresholds & clim_ave
-#         thrs_name = r'./ELP_event/threshold/threshold_for_baseline/' + power + '_threshold_' + climate_model + '_ws15_r' + str(year) + '_remove_seasonal_cycle.nc'
-#         thresholds = xr.open_dataset(thrs_name)
-#         thresholds = thresholds['threshold_10th_1985-2014'].values 
-#         # --> (lat, lon, time)
-#         thresholds = np.transpose(thresholds, (1, 2, 0))
+    for year in time_range:        
+        # read thresholds & clim_ave
+        thrs_name = r'./ELP_event/threshold/threshold_for_baseline/' + power + '_threshold_' + climate_model + '_ws15_r' + str(year) + '_remove_seasonal_cycle.nc'
+        thresholds = xr.open_dataset(thrs_name)
+        thresholds = thresholds['threshold_10th_1985-2014'].values 
+        # --> (lat, lon, time)
+        thresholds = np.transpose(thresholds, (1, 2, 0))
 
-#         ave_name =  r'./ELP_event/threshold/threshold_for_baseline/' + power + '_clim_ave_' + climate_model + '_ws15_r' + str(year) + '_remove_seasonal_cycle.nc'
-#         clim_aves = xr.open_dataset(ave_name)
-#         clim_aves = clim_aves['clim_ave_1985-2014'].values
-#         # --> (lat, lon, time)
-#         clim_aves = np.transpose(clim_aves, (1, 2, 0))  
+        ave_name =  r'./ELP_event/threshold/threshold_for_baseline/' + power + '_clim_ave_' + climate_model + '_ws15_r' + str(year) + '_remove_seasonal_cycle.nc'
+        clim_aves = xr.open_dataset(ave_name)
+        clim_aves = clim_aves['clim_ave_1985-2014'].values
+        # --> (lat, lon, time)
+        clim_aves = np.transpose(clim_aves, (1, 2, 0))  
 
-#         t = datetime.datetime.now()
-#         main(power, climate_model, scenario, year, thresholds, clim_aves)
-#         print('finished:', climate_model, scenario, year, datetime.datetime.now()-t) 
+        t = datetime.datetime.now()
+        main(power, climate_model, scenario, year, thresholds, clim_aves)
+        print('finished:', climate_model, scenario, year, datetime.datetime.now()-t) 
         
         
         
-#     # -------- future
+    # -------- future
+    
+    # read thresholds & clim_ave
+    thrs_name = r'./ELP_event/threshold/threshold_for_future/' + power + '_threshold_' + climate_model + '_ws15_remove_seasonal_cycle.nc'
+    thresholds = xr.open_dataset(thrs_name)
+    thresholds = thresholds['threshold_10th_1985-2014'].values 
+    # --> (lat, lon, time)
+    thresholds = np.transpose(thresholds, (1, 2, 0))
 
-#     # read thresholds & clim_ave
-#     thrs_name = r'./ELP_event/threshold/threshold_for_future/' + power + '_threshold_' + climate_model + '_ws15_remove_seasonal_cycle.nc'
-#     thresholds = xr.open_dataset(thrs_name)
-#     thresholds = thresholds['threshold_10th_1985-2014'].values 
-#     # --> (lat, lon, time)
-#     thresholds = np.transpose(thresholds, (1, 2, 0))
-
-#     ave_name =  r'./ELP_event/threshold/threshold_for_future/' + power + '_clim_ave_' + climate_model + '_ws15_remove_seasonal_cycle.nc'
-#     clim_aves = xr.open_dataset(ave_name)
-#     clim_aves = clim_aves['clim_ave_1985-2014'].values
-#     # --> (lat, lon, time)
-#     clim_aves = np.transpose(clim_aves, (1, 2, 0))  
+    ave_name =  r'./ELP_event/threshold/threshold_for_future/' + power + '_clim_ave_' + climate_model + '_ws15_remove_seasonal_cycle.nc'
+    clim_aves = xr.open_dataset(ave_name)
+    clim_aves = clim_aves['clim_ave_1985-2014'].values
+    # --> (lat, lon, time)
+    clim_aves = np.transpose(clim_aves, (1, 2, 0))  
     
 
-#     for s in range(0, len(scenarios)):
-#         scenario = scenarios[s]
-#         start_year = start_years[s]
-#         end_year = end_years[s]
-#         time_range = np.arange(start_year,end_year+1)  
+    for s in range(0, len(scenarios)):
+        scenario = scenarios[s]
+        start_year = start_years[s]
+        end_year = end_years[s]
+        time_range = np.arange(start_year,end_year+1)  
         
-#         for year in time_range:
-#             t = datetime.datetime.now()
-#             main(power, climate_model, scenario, year, thresholds, clim_aves)
-#             print('finished:', climate_model, scenario, year, datetime.datetime.now()-t)
+        for year in time_range:
+            t = datetime.datetime.now()
+            main(power, climate_model, scenario, year, thresholds, clim_aves)
+            print('finished:', climate_model, scenario, year, datetime.datetime.now()-t)
+    
+'''      
 
             
 
-            
-
-
 
         
-
